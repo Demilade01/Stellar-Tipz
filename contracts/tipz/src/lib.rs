@@ -68,11 +68,15 @@ impl TipzContract {
         image_url: String,
         x_handle: String,
     ) -> Result<Profile, ContractError> {
-        // Validate username format (issue #4)
-        crate::validation::validate_username(&_username)?;
-
-        // TODO: Implement remaining logic in issue #1 - Profile Registration
-        Err(ContractError::NotInitialized)
+        profile::register_profile(
+            &env,
+            caller,
+            username,
+            display_name,
+            bio,
+            image_url,
+            x_handle,
+        )
     }
 
     /// Update an existing profile (owner only).

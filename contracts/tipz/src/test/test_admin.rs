@@ -18,21 +18,27 @@ use crate::TipzContract;
 use crate::TipzContractClient;
 
 /// Helper: create an env + client for the Tipz contract.
-fn setup_env() -> (Env, TipzContractClient<'static>) {
+fn setup_env() -> (Env, TipzContractClient<'static>, Address) {
     let env = Env::default();
     let contract_id = env.register_contract(None, TipzContract);
     let client = TipzContractClient::new(&env, &contract_id);
-    (env, client)
+
+    let token_admin = Address::generate(&env);
+    let token_address = env
+        .register_stellar_asset_contract_v2(token_admin)
+        .address();
+
+    (env, client, token_address)
 }
 
 #[test]
 fn test_initialize_sets_state_correctly() {
-    let (env, client) = setup_env();
+    let (env, client, token_address) = setup_env();
     let admin = Address::generate(&env);
     let fee_collector = Address::generate(&env);
     let fee_bps: u32 = 200; // 2%
 
-    client.initialize(&admin, &fee_collector, &fee_bps);
+    client.initialize(&admin, &fee_collector, &fee_bps, &token_address);
 
     // Verify stored values via raw storage access
     let stored_admin: Address = env.as_contract(&client.address, || {
@@ -61,11 +67,11 @@ fn test_initialize_sets_state_correctly() {
 
 #[test]
 fn test_initialize_counters_are_zero() {
-    let (env, client) = setup_env();
+    let (env, client, token_address) = setup_env();
     let admin = Address::generate(&env);
     let fee_collector = Address::generate(&env);
 
-    client.initialize(&admin, &fee_collector, &200_u32);
+    client.initialize(&admin, &fee_collector, &200_u32, &token_address);
 
     let total_creators: u32 = env.as_contract(&client.address, || {
         env.storage()
@@ -99,34 +105,34 @@ fn test_initialize_counters_are_zero() {
 
 #[test]
 fn test_initialize_twice_returns_already_initialized() {
-    let (env, client) = setup_env();
+    let (env, client, token_address) = setup_env();
     let admin = Address::generate(&env);
     let fee_collector = Address::generate(&env);
 
-    client.initialize(&admin, &fee_collector, &200_u32);
+    client.initialize(&admin, &fee_collector, &200_u32, &token_address);
 
-    let result = client.try_initialize(&admin, &fee_collector, &200_u32);
+    let result = client.try_initialize(&admin, &fee_collector, &200_u32, &token_address);
     assert_eq!(result, Err(Ok(ContractError::AlreadyInitialized)));
 }
 
 #[test]
 fn test_initialize_fee_too_high_returns_invalid_fee() {
-    let (env, client) = setup_env();
+    let (env, client, token_address) = setup_env();
     let admin = Address::generate(&env);
     let fee_collector = Address::generate(&env);
 
-    let result = client.try_initialize(&admin, &fee_collector, &1001_u32);
+    let result = client.try_initialize(&admin, &fee_collector, &1001_u32, &token_address);
     assert_eq!(result, Err(Ok(ContractError::InvalidFee)));
 }
 
 #[test]
 fn test_initialize_max_fee_succeeds() {
-    let (env, client) = setup_env();
+    let (env, client, token_address) = setup_env();
     let admin = Address::generate(&env);
     let fee_collector = Address::generate(&env);
 
     // 1000 bps = 10%, which is the maximum allowed
-    client.initialize(&admin, &fee_collector, &1000_u32);
+    client.initialize(&admin, &fee_collector, &1000_u32, &token_address);
 
     let stored_fee: u32 = env.as_contract(&client.address, || {
         env.storage().instance().get(&DataKey::FeePercent).unwrap()
@@ -136,11 +142,11 @@ fn test_initialize_max_fee_succeeds() {
 
 #[test]
 fn test_initialize_zero_fee_succeeds() {
-    let (env, client) = setup_env();
+    let (env, client, token_address) = setup_env();
     let admin = Address::generate(&env);
     let fee_collector = Address::generate(&env);
 
-    client.initialize(&admin, &fee_collector, &0_u32);
+    client.initialize(&admin, &fee_collector, &0_u32, &token_address);
 
     let stored_fee: u32 = env.as_contract(&client.address, || {
         env.storage().instance().get(&DataKey::FeePercent).unwrap()

@@ -15,8 +15,11 @@
 //! created). It lives in instance storage so it persists for the lifetime of
 //! the contract.
 
-use soroban_sdk::{Address, Env, String, Vec};
+use soroban_sdk::{token, Address, Env, String, Vec};
 
+use crate::errors::ContractError;
+use crate::events::emit_tip_sent;
+use crate::storage;
 use crate::storage::DataKey;
 use crate::types::Tip;
 
@@ -116,12 +119,8 @@ pub fn get_recent_tips(env: &Env, creator: &Address, count: u32) -> Vec<Tip> {
         }
     }
 
-use soroban_sdk::{token, Address, Env, String};
-
-use crate::errors::ContractError;
-use crate::events::emit_tip_sent;
-use crate::storage::{self, DataKey};
-use crate::types::Tip;
+    result
+}
 
 /// Send an XLM tip from `tipper` to a registered `creator`.
 pub fn send_tip(
@@ -170,8 +169,9 @@ pub fn send_tip(
     // 8. Create Tip record and store in temporary storage
     let tip_index = storage::increment_tip_count(env);
     let tip = Tip {
-        from: tipper.clone(),
-        to: creator.clone(),
+        id: tip_index,
+        tipper: tipper.clone(),
+        creator: creator.clone(),
         amount,
         message: message.clone(),
         timestamp: env.ledger().timestamp(),

@@ -31,6 +31,20 @@ pub fn initialize(
     storage::set_fee_bps(env, fee_bps);
     storage::set_native_token(env, native_token);
 
+    // Explicitly initialize counters to zero.
+    env.storage()
+        .instance()
+        .set(&storage::DataKey::TipCount, &0_u32);
+    env.storage()
+        .instance()
+        .set(&storage::DataKey::TotalCreators, &0_u32);
+    env.storage()
+        .instance()
+        .set(&storage::DataKey::TotalTipsVolume, &0_i128);
+    env.storage()
+        .instance()
+        .set(&storage::DataKey::TotalFeesCollected, &0_i128);
+
     Ok(())
 }
 
