@@ -16,15 +16,32 @@ const kit = new StellarWalletsKit({
 });
 
 export const useWallet = () => {
-  const { publicKey, connected, network, connect, disconnect } = useWalletStore();
+  const {
+    publicKey,
+    connected,
+    connecting,
+    error,
+    network,
+    connect,
+    disconnect,
+    setConnecting,
+    setError,
+  } = useWalletStore();
 
   const actions = useMemo(() => ({
     connect: () => {
+      setConnecting(true);
+      setError(null);
       kit.openModal({
         onWalletSelected: async (option) => {
-          kit.setWallet(option.id);
-          const { address } = await kit.getAddress();
-          connect(address);
+          try {
+            kit.setWallet(option.id);
+            const { address } = await kit.getAddress();
+            connect(address);
+          } catch (err) {
+            console.error('Wallet connection failed:', err);
+            setError(err instanceof Error ? err.message : 'Failed to connect wallet');
+          }
         },
       });
     },
@@ -39,7 +56,7 @@ export const useWallet = () => {
       });
       return signedTxXdr;
     },
-  }), [publicKey, connect, disconnect]);
+  }), [publicKey, connect, disconnect, setConnecting, setError]);
 
-  return { publicKey, connected, network, ...actions };
+  return { publicKey, connected, connecting, error, network, ...actions };
 };
