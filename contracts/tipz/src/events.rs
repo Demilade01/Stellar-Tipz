@@ -8,7 +8,7 @@
 //! Topic tuple  → `(Symbol, Symbol)`   – identifies the event type
 //! Data tuple   → `(field, field, …)`  – the payload
 
-use soroban_sdk::{symbol_short, Address, Env, String};
+use soroban_sdk::{symbol_short, Address, Env, String, Vec};
 
 // ── Profile events ────────────────────────────────────────────────────────────
 
@@ -118,5 +118,19 @@ pub fn emit_x_metrics_batch_skipped(env: &Env, creator: &Address) {
     env.events().publish(
         (symbol_short!("batch"), symbol_short!("skipped")),
         (creator.clone(),),
+    );
+}
+
+/// Topics : `("batch", "done")`
+/// Data   : `(processed: u32, skipped: u32, skipped_addrs: Vec<Address>)`
+pub fn emit_x_metrics_batch_completed(
+    env: &Env,
+    processed: u32,
+    skipped: u32,
+    skipped_addresses: Vec<Address>,
+) {
+    env.events().publish(
+        (symbol_short!("batch"), symbol_short!("done")),
+        (processed, skipped, skipped_addresses),
     );
 }

@@ -105,14 +105,28 @@ impl TipzContract {
 
     /// Batch-update X metrics for multiple creators (admin only).
     ///
-    /// At most 50 entries per call. Unregistered addresses are skipped (with a
-    /// logged event) instead of failing the transaction.
+    /// At most 50 entries per call. Unregistered addresses and entries with
+    /// invalid metric values are skipped (with a logged event per skip).
+    /// Returns the list of skipped addresses.
+    ///
+    /// Emits an `XMetricsBatchCompleted` event with processed count, skipped
+    /// count, and the skipped addresses.
     pub fn batch_update_x_metrics(
         env: Env,
         caller: Address,
         updates: Vec<(Address, u32, u32)>,
-    ) -> Result<u32, ContractError> {
+    ) -> Result<Vec<Address>, ContractError> {
         admin::batch_update_x_metrics(&env, &caller, updates)
+    }
+
+    /// Preview which addresses would be skipped by `batch_update_x_metrics`
+    /// without modifying any on-chain state (dry-run mode). Admin only.
+    pub fn batch_update_x_metrics_preview(
+        env: Env,
+        caller: Address,
+        updates: Vec<(Address, u32, u32)>,
+    ) -> Result<Vec<Address>, ContractError> {
+        admin::batch_update_x_metrics_preview(&env, &caller, updates)
     }
 
     /// Get a profile by address.
