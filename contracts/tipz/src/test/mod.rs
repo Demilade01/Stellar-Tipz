@@ -11,4 +11,5 @@ mod test_register;
 mod test_tips;
 mod test_update_profile;
 mod test_validation;
+mod test_versioning;
 mod test_withdraw;
