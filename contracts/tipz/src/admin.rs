@@ -4,13 +4,12 @@
 //! - Fee management
 //! - Admin role transfer
 
-use soroban_sdk::{Address, BytesN, Env, Vec};
+use soroban_sdk::{Address, Env, Vec};
 
 use crate::credit;
 use crate::errors::ContractError;
 use crate::events;
 use crate::storage::{self, DataKey};
-use crate::CONTRACT_VERSION;
 
 pub fn require_admin(env: &Env, caller: &Address) -> Result<(), ContractError> {
     if !storage::is_initialized(env) {
@@ -52,7 +51,6 @@ pub fn initialize(
     storage::set_fee_collector(env, fee_collector);
     storage::set_fee_bps(env, fee_bps);
     storage::set_native_token(env, native_token);
-    storage::set_version(env, CONTRACT_VERSION);
     storage::set_paused(env, false);
     storage::set_min_tip_amount(env, 1_000_000_i128);
 
@@ -240,25 +238,6 @@ pub fn set_admin(env: &Env, caller: &Address, new_admin: &Address) -> Result<(),
     let old_admin = storage::get_admin(env);
     storage::set_admin(env, new_admin);
     events::emit_admin_changed(env, &old_admin, new_admin);
-    Ok(())
-}
-
-/// Replace the contract WASM and bump the stored version. Admin only.
-///
-/// The WASM blob identified by `new_wasm_hash` must already be uploaded to
-/// the ledger. After this call the contract executes the new WASM code and the
-/// stored version is incremented by one.
-pub fn upgrade(
-    env: &Env,
-    caller: &Address,
-    new_wasm_hash: &BytesN<32>,
-) -> Result<(), ContractError> {
-    storage::extend_instance_ttl(env);
-    require_admin(env, caller)?;
-    env.deployer()
-        .update_current_contract_wasm(new_wasm_hash.clone());
-    let current = storage::get_version(env);
-    storage::set_version(env, current + 1);
     Ok(())
 }
 

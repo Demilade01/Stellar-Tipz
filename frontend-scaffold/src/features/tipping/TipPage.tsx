@@ -39,10 +39,7 @@ const TipPage: React.FC = () => {
     ...mockProfile,
     username: username || mockProfile.username,
   };
-
-  // Placeholder: in production this would be set when the creator lookup fails
-  const creatorNotFound = false;
-
+  
   usePageTitle(`Tip @${creator.username}`);
 
   const { step, goToConfirm, confirmAndSign, reset, error, txHash } = useTipFlow(creator.owner);
