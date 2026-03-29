@@ -82,12 +82,15 @@ export const simulateTx = async <ArgType>(
   throw new Error("cannot simulate transaction");
 };
 
+const MAX_RETRIES = 30;
+
 // Build and submits a transaction to the Soroban RPC
 // Polls for non-pending state, returns result after status is updated
 export const submitTx = async (
   signedXDR: string,
   networkPassphrase: string,
   server: SorobanRpc.Server,
+  onRetry?: (retriesRemaining: number) => void,
 ) => {
   const tx = TransactionBuilder.fromXDR(signedXDR, networkPassphrase);
 
@@ -99,23 +102,27 @@ export const submitTx = async (
 
   if (sendResponse.status === SendTxStatus.Pending) {
     let txResponse = await server.getTransaction(sendResponse.hash);
+    let retries = 0;
 
-    // Poll this until the status is not "NOT_FOUND"
     while (
       txResponse.status === SorobanRpc.Api.GetTransactionStatus.NOT_FOUND
     ) {
-      // See if the transaction is complete
-      // eslint-disable-next-line no-await-in-loop
-      txResponse = await server.getTransaction(sendResponse.hash);
-      // Wait a second
-      // eslint-disable-next-line no-await-in-loop
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (retries >= MAX_RETRIES) {
+        throw new Error("Transaction not confirmed after maximum retries");
+      }
+
+      const delay = Math.min(1000 * 2 ** retries, 16000); // cap at 16s
+      await new Promise((resolve) => setTimeout(resolve, delay)); // eslint-disable-line no-await-in-loop
+
+      retries += 1;
+      onRetry?.(MAX_RETRIES - retries);
+
+      txResponse = await server.getTransaction(sendResponse.hash); // eslint-disable-line no-await-in-loop
     }
 
     if (txResponse.status === SorobanRpc.Api.GetTransactionStatus.SUCCESS) {
       return txResponse.resultXdr.toXDR("base64");
     }
-    // eslint-disable-next-line no-else-return
   }
   throw new Error(
     `Unabled to submit transaction, status: ${sendResponse.status}`,
