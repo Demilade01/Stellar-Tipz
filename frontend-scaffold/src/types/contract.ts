@@ -7,8 +7,7 @@ export interface Profile {
   imageUrl: string;
   xHandle: string;
   xFollowers: number;
-  xPosts: number;
-  xReplies: number;
+  xEngagementAvg: number;
   creditScore: number;
   totalTipsReceived: string; // i128 as string
   totalTipsCount: number;
