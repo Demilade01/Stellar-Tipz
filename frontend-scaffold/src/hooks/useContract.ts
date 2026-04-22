@@ -133,7 +133,7 @@ export const useContract = () => {
       wallet.publicKey || "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF",
       BASE_FEE,
       server,
-      TESTNET_DETAILS.networkPassphrase
+      networkDetails.networkPassphrase
     );
     const tx = txBuilder
       .addOperation(contract.call("get_min_tip_amount"))
@@ -143,7 +143,7 @@ export const useContract = () => {
     const minTipStroops = await simulateTx<number>(tx, server);
     // Convert stroops to XLM string for display
     return (minTipStroops / 1e7).toString();
-  }, [contractId, wallet.publicKey, server]);
+  }, [contractId, wallet.publicKey, server, networkDetails]);
 
   const getRecentTips = useCallback(async (creator: string, limit: number, offset: number): Promise<Tip[]> => {
     const contract = new Contract(contractId);

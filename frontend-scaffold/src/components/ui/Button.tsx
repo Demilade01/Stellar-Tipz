@@ -37,6 +37,7 @@ const Button: React.FC<ButtonProps> = ({
   const shadow = variant !== 'ghost' ? '4px 4px 0px 0px rgba(0,0,0,1)' : 'none';
 
   const leadingIcon = loading ? <Loader size="sm" /> : icon;
+  const label = loading ? 'Loading...' : children;
 
   return (
     <button
@@ -46,7 +47,7 @@ const Button: React.FC<ButtonProps> = ({
       {...props}
     >
       {leadingIcon}
-      {children}
+      {label}
       {!loading && iconRight}
     </button>
   );

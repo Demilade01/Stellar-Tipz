@@ -85,8 +85,9 @@ describe('TopCreatorsSection', () => {
         renderComponent();
 
         await waitFor(() => {
-            expect(screen.getByText(/Could not load top creators/i)).toBeInTheDocument();
+            expect(screen.getByText(/Connection Issue/i)).toBeInTheDocument();
         });
+        expect(screen.getByText(/Try Again/i)).toBeInTheDocument();
     });
 
     it('navigates to leaderboard on link click', async () => {

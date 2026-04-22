@@ -3,14 +3,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useWallet } from '../useWallet';
 import { useWalletStore } from '../../store/walletStore';
 
+const walletKitMock = vi.hoisted(() => ({
+  openModal: vi.fn(),
+  setWallet: vi.fn(),
+  getAddress: vi.fn(),
+  signTransaction: vi.fn(),
+}));
+
 // Mock the StellarWalletsKit
 vi.mock('@creit.tech/stellar-wallets-kit', () => ({
-  StellarWalletsKit: vi.fn().mockImplementation(() => ({
-    openModal: vi.fn(),
-    setWallet: vi.fn(),
-    getAddress: vi.fn(),
-    signTransaction: vi.fn(),
-  })),
+  StellarWalletsKit: vi.fn(function MockStellarWalletsKit() {
+    return walletKitMock;
+  }),
   WalletNetwork: {
     TESTNET: 'TESTNET',
     PUBLIC: 'PUBLIC',
@@ -32,6 +36,8 @@ Object.defineProperty(window, 'freighter', {
 
 describe('useWallet', () => {
   beforeEach(() => {
+    localStorage.clear();
+    useWalletStore.persist.clearStorage();
     // Reset the store before each test
     useWalletStore.setState({
       publicKey: null,
@@ -40,6 +46,10 @@ describe('useWallet', () => {
       error: null,
       network: 'TESTNET',
     });
+    walletKitMock.openModal.mockReset();
+    walletKitMock.setWallet.mockReset();
+    walletKitMock.getAddress.mockReset();
+    walletKitMock.signTransaction.mockReset();
     vi.clearAllMocks();
   });
 
@@ -60,19 +70,19 @@ describe('useWallet', () => {
     const mockOnWalletSelected = vi.fn();
     
     // Mock the kit.openModal to call the callback with address
-    const StellarWalletsKit = await import('@creit.tech/stellar-wallets-kit');
-    const mockKit = (StellarWalletsKit.StellarWalletsKit as any).mock.results[0].value;
-    mockKit.openModal.mockImplementation(({ onWalletSelected }) => {
-      mockOnWalletSelected.mockImplementation(async (option: any) => {
-        mockKit.setWallet(option.id);
-        mockKit.getAddress.mockResolvedValue({ address: mockAddress });
-        await onWalletSelected(option);
-      });
-      return Promise.resolve();
-    });
+    walletKitMock.openModal.mockImplementation(
+      ({ onWalletSelected }: { onWalletSelected: (option: { id: string }) => Promise<void> | void }) => {
+        mockOnWalletSelected.mockImplementation(async (option: { id: string }) => {
+          walletKitMock.setWallet(option.id);
+          walletKitMock.getAddress.mockResolvedValue({ address: mockAddress });
+          await onWalletSelected(option);
+        });
+        return Promise.resolve();
+      }
+    );
 
     await act(async () => {
-      result.current.connect();
+      await result.current.connect();
     });
 
     // Simulate wallet selection
@@ -118,19 +128,19 @@ describe('useWallet', () => {
     const mockOnWalletSelected = vi.fn();
     
     // Mock the kit.openModal to call the callback with error
-    const StellarWalletsKit = await import('@creit.tech/stellar-wallets-kit');
-    const mockKit = (StellarWalletsKit.StellarWalletsKit as any).mock.results[0].value;
-    mockKit.openModal.mockImplementation(({ onWalletSelected }) => {
-      mockOnWalletSelected.mockImplementation(async (option: any) => {
-        mockKit.setWallet(option.id);
-        mockKit.getAddress.mockRejectedValue(new Error('Connection failed'));
-        await onWalletSelected(option);
-      });
-      return Promise.resolve();
-    });
+    walletKitMock.openModal.mockImplementation(
+      ({ onWalletSelected }: { onWalletSelected: (option: { id: string }) => Promise<void> | void }) => {
+        mockOnWalletSelected.mockImplementation(async (option: { id: string }) => {
+          walletKitMock.setWallet(option.id);
+          walletKitMock.getAddress.mockRejectedValue(new Error('Connection failed'));
+          await onWalletSelected(option);
+        });
+        return Promise.resolve();
+      }
+    );
 
     await act(async () => {
-      result.current.connect();
+      await result.current.connect();
     });
 
     // Simulate wallet selection with error
@@ -172,15 +182,12 @@ describe('useWallet', () => {
     });
 
     const { result } = renderHook(() => useWallet());
-    
-    const StellarWalletsKit = await import('@creit.tech/stellar-wallets-kit');
-    const mockKit = (StellarWalletsKit.StellarWalletsKit as any).mock.results[0].value;
-    mockKit.signTransaction.mockResolvedValue({ signedTxXdr: mockSignedXdr });
+    walletKitMock.signTransaction.mockResolvedValue({ signedTxXdr: mockSignedXdr });
 
     const signedTx = await result.current.signTransaction(mockXdr);
 
     expect(signedTx).toBe(mockSignedXdr);
-    expect(mockKit.signTransaction).toHaveBeenCalledWith(mockXdr, {
+    expect(walletKitMock.signTransaction).toHaveBeenCalledWith(mockXdr, {
       address: 'GD1234567890ABCDEF',
     });
   });

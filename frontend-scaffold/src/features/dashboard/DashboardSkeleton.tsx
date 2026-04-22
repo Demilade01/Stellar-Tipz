@@ -3,6 +3,8 @@ import PageContainer from "../../components/layout/PageContainer";
 import Card from "../../components/ui/Card";
 import Skeleton from "../../components/ui/Skeleton";
 
+const CHART_BAR_HEIGHTS = ['28%', '46%', '62%', '38%', '54%', '72%', '44%'];
+
 const DashboardSkeleton: React.FC = () => {
     return (
         <PageContainer maxWidth="xl" className="space-y-6 py-10">
@@ -33,9 +35,9 @@ const DashboardSkeleton: React.FC = () => {
                             </div>
                             <div className="relative border-2 border-black bg-white p-6 pb-2">
                                 <div className="flex h-48 items-end gap-2 md:gap-4">
-                                    {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-                                        <div key={i} className="flex flex-1 flex-col items-center">
-                                            <Skeleton width="100%" height={`${Math.random() * 60 + 20}%`} />
+                                    {CHART_BAR_HEIGHTS.map((height, index) => (
+                                        <div key={index} className="flex flex-1 flex-col items-center">
+                                            <Skeleton width="100%" height={height} />
                                             <Skeleton width="30px" height="10px" className="mt-2" />
                                         </div>
                                     ))}
