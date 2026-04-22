@@ -4,6 +4,13 @@ import Badge from '../Badge';
 import { getTierFromScore } from '@/helpers/badge';
 
 describe('Badge Component', () => {
+  it('renders new tier correctly', () => {
+    render(<Badge tier="new" />);
+    expect(screen.getByText('New')).toBeDefined();
+    expect(screen.getByText('*')).toBeDefined();
+    expect(screen.getByText('New').parentElement).toHaveClass('bg-slate-100');
+  });
+
   it('renders bronze tier correctly', () => {
     render(<Badge tier="bronze" />);
     expect(screen.getByText('Bronze')).toBeDefined();
@@ -33,8 +40,8 @@ describe('Badge Component', () => {
   });
 
   it('displays score when provided', () => {
-    render(<Badge tier="gold" score={500} />);
-    expect(screen.getByText('(500)')).toBeDefined();
+    render(<Badge tier="gold" score={50} />);
+    expect(screen.getByText('(50)')).toBeDefined();
   });
 
   it('does not display score when not provided', () => {
@@ -50,13 +57,15 @@ describe('Badge Component', () => {
 
 describe('getTierFromScore utility', () => {
   it('returns correctly for various scores', () => {
-    expect(getTierFromScore(100)).toBe('bronze');
-    expect(getTierFromScore(400)).toBe('bronze');
-    expect(getTierFromScore(401)).toBe('silver');
-    expect(getTierFromScore(700)).toBe('silver');
-    expect(getTierFromScore(701)).toBe('gold');
-    expect(getTierFromScore(900)).toBe('gold');
-    expect(getTierFromScore(901)).toBe('diamond');
-    expect(getTierFromScore(1500)).toBe('diamond');
+    expect(getTierFromScore(0)).toBe('new');
+    expect(getTierFromScore(19)).toBe('new');
+    expect(getTierFromScore(20)).toBe('bronze');
+    expect(getTierFromScore(39)).toBe('bronze');
+    expect(getTierFromScore(40)).toBe('silver');
+    expect(getTierFromScore(59)).toBe('silver');
+    expect(getTierFromScore(60)).toBe('gold');
+    expect(getTierFromScore(79)).toBe('gold');
+    expect(getTierFromScore(80)).toBe('diamond');
+    expect(getTierFromScore(100)).toBe('diamond');
   });
 });

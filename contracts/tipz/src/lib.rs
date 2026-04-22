@@ -33,7 +33,8 @@ use soroban_sdk::{contract, contractimpl, Address, BytesN, Env, String, Vec};
 
 use crate::errors::ContractError;
 use crate::types::{
-    ContractConfig, ContractStats, CreditBreakdown, CreditTier, LeaderboardEntry, Profile, Tip,
+    BatchSkip, ContractConfig, ContractStats, CreditBreakdown, CreditTier, LeaderboardEntry,
+    Profile, Tip,
 };
 
 /// The current contract interface version, stored on-chain during initialization.
@@ -110,6 +111,8 @@ impl TipzContract {
     /// - Removes username reverse-lookup entry
     /// - Removes creator from leaderboard (if present)
     /// - Decrements total creators counter
+    /// - Resets per-creator and per-tipper tip index entries in temporary storage
+    ///   (prevents index collisions on re-registration)
     /// - Emits ProfileDeregistered event
     ///
     /// # Errors
@@ -133,27 +136,30 @@ impl TipzContract {
 
     /// Batch-update X metrics for multiple creators (admin only).
     ///
-    /// At most 50 entries per call. Unregistered addresses and entries with
-    /// invalid metric values are skipped (with a logged event per skip).
-    /// Returns the list of skipped addresses.
+    /// At most 50 entries per call. Entries are skipped when the address is
+    /// not registered (reason 0) or metric values are out of bounds (reason 1).
+    /// A per-entry `batch_skipped` event is emitted for each skip.
+    /// Returns a `Vec<BatchSkip>` describing each skipped entry and why.
     ///
     /// Emits an `XMetricsBatchCompleted` event with processed count, skipped
-    /// count, and the skipped addresses.
+    /// count, and the full list of skipped entries.
     pub fn batch_update_x_metrics(
         env: Env,
         caller: Address,
         updates: Vec<(Address, u32, u32)>,
-    ) -> Result<Vec<Address>, ContractError> {
+    ) -> Result<Vec<BatchSkip>, ContractError> {
         admin::batch_update_x_metrics(&env, &caller, updates)
     }
 
-    /// Preview which addresses would be skipped by `batch_update_x_metrics`
+    /// Preview which entries would be skipped by `batch_update_x_metrics`
     /// without modifying any on-chain state (dry-run mode). Admin only.
+    /// Returns a `Vec<BatchSkip>` with skip reasons (0 = not registered,
+    /// 1 = invalid metrics).
     pub fn batch_update_x_metrics_preview(
         env: Env,
         caller: Address,
         updates: Vec<(Address, u32, u32)>,
-    ) -> Result<Vec<Address>, ContractError> {
+    ) -> Result<Vec<BatchSkip>, ContractError> {
         admin::batch_update_x_metrics_preview(&env, &caller, updates)
     }
 

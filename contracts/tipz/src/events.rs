@@ -10,6 +10,8 @@
 
 use soroban_sdk::{symbol_short, Address, Env, String, Vec};
 
+use crate::types::BatchSkip;
+
 // ── Profile events ────────────────────────────────────────────────────────────
 
 /// Topics : `("profile", "registered")`
@@ -171,24 +173,28 @@ pub fn emit_min_tip_amount_updated(env: &Env, old_min: i128, new_min: i128) {
 // ── Batch events ──────────────────────────────────────────────────────────────
 
 /// Topics : `("batch", "skipped")`
-/// Data   : `(creator: Address,)`
-pub fn emit_x_metrics_batch_skipped(env: &Env, creator: &Address) {
+/// Data   : `(creator: Address, reason: u32)`
+///
+/// `reason` codes:
+/// - `0` — address is not registered
+/// - `1` — metric values failed validation
+pub fn emit_x_metrics_batch_skipped(env: &Env, creator: &Address, reason: u32) {
     env.events().publish(
         (symbol_short!("batch"), symbol_short!("skipped")),
-        (creator.clone(),),
+        (creator.clone(), reason),
     );
 }
 
 /// Topics : `("batch", "done")`
-/// Data   : `(processed: u32, skipped: u32, skipped_addrs: Vec<Address>)`
+/// Data   : `(processed: u32, skipped_count: u32, skipped_entries: Vec<BatchSkip>)`
 pub fn emit_x_metrics_batch_completed(
     env: &Env,
     processed: u32,
-    skipped: u32,
-    skipped_addresses: Vec<Address>,
+    skipped_count: u32,
+    skipped_entries: Vec<BatchSkip>,
 ) {
     env.events().publish(
         (symbol_short!("batch"), symbol_short!("done")),
-        (processed, skipped, skipped_addresses),
+        (processed, skipped_count, skipped_entries),
     );
 }

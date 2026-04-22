@@ -8,20 +8,12 @@ import { useContract } from '@/hooks';
 import { useState, useEffect } from 'react';
 import Loader from '@/components/ui/Loader';
 
-const RecentTips: React.FC = () => {
-  const { username } = useParams<{ username: string }>();
-  const { getProfileByUsername } = useContract();
-  const [targetAddress, setTargetAddress] = useState<string | null>(null);
+interface RecentTipsProps {
+  address: string;
+}
 
-  useEffect(() => {
-    if (username) {
-      getProfileByUsername(username)
-        .then(p => setTargetAddress(p.owner))
-        .catch(() => setTargetAddress(null));
-    }
-  }, [username, getProfileByUsername]);
-
-  const { tips, loading } = useTips(targetAddress || "", "creator", 3);
+const RecentTips: React.FC<RecentTipsProps> = ({ address }) => {
+  const { tips, loading } = useTips(address, "creator", 3);
 
   if (loading && tips.length === 0) {
     return <div className="py-10 flex justify-center"><Loader size="sm" /></div>;
@@ -34,7 +26,7 @@ const RecentTips: React.FC = () => {
   return (
     <div className="space-y-3">
       {tips.map((tip) => (
-        <div key={`${tip.from}-${tip.timestamp}`} className="border-2 border-black p-4">
+        <div key={tip.id} className="border-2 border-black p-4">
           <div className="flex items-center justify-between gap-4">
             <p className="text-xs font-black uppercase tracking-[0.2em] text-gray-500">Supporter note</p>
             <AmountDisplay amount={tip.amount} />

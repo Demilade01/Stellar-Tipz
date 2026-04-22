@@ -10,8 +10,8 @@ Complete guide to setting up Stellar Tipz for local development.
 |------|---------|---------|
 | **Node.js** | 18+ | Frontend build tooling |
 | **npm** | 9+ | Package management |
-| **Rust** | 1.74+ | Smart contract development |
-| **Cargo** | 1.74+ | Rust package manager |
+| **Rust** | 1.88+ | Smart contract development |
+| **Cargo** | 1.88+ | Rust package manager |
 | **Soroban CLI** | 21.0+ | Contract build, deploy, invoke |
 | **Git** | 2.30+ | Version control |
 | **Freighter** | Latest | Stellar wallet (browser extension) |
@@ -100,14 +100,14 @@ npm install --legacy-peer-deps
 cp .env.example .env
 
 # Edit .env with your contract ID
-# CONTRACT_ID=<your-deployed-contract-id>
-# REACT_APP_NETWORK=TESTNET
+# VITE_CONTRACT_ID=<your-deployed-contract-id>
+# VITE_NETWORK=TESTNET
 
 # Start development server
-npm start
+npm run dev
 ```
 
-The app will be available at **http://localhost:9000**.
+The app will be available at **http://localhost:3000**.
 
 ---
 
@@ -157,7 +157,7 @@ See [ARCHITECTURE.md](../ARCHITECTURE.md) for the full project structure.
 
 | Command | Description |
 |---------|-------------|
-| `cd frontend-scaffold && npm start` | Start dev server (port 9000) |
+| `cd frontend-scaffold && npm run dev` | Start dev server (port 3000) |
 | `cd frontend-scaffold && npm run build` | Production build |
 | `cd frontend-scaffold && npx tsc --noEmit` | Type-check without emitting |
 

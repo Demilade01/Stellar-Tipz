@@ -7,8 +7,7 @@ export interface Profile {
   imageUrl: string;
   xHandle: string;
   xFollowers: number;
-  xPosts: number;
-  xReplies: number;
+  xEngagementAvg: number;
   creditScore: number;
   totalTipsReceived: string; // i128 as string
   totalTipsCount: number;
@@ -19,8 +18,9 @@ export interface Profile {
 
 /** Tip record from the contract */
 export interface Tip {
-  from: string;
-  to: string;
+  id: number;
+  tipper: string;
+  creator: string;
   amount: string; // i128 as string
   message: string;
   timestamp: number;
@@ -44,11 +44,12 @@ export interface ContractStats {
 }
 
 /** Credit score tiers */
-export type CreditTier = 'bronze' | 'silver' | 'gold' | 'diamond';
+export type CreditTier = 'new' | 'bronze' | 'silver' | 'gold' | 'diamond';
 
 export const getCreditTier = (score: number): CreditTier => {
-  if (score >= 901) return 'diamond';
-  if (score >= 701) return 'gold';
-  if (score >= 401) return 'silver';
-  return 'bronze';
+  if (score >= 80) return 'diamond';
+  if (score >= 60) return 'gold';
+  if (score >= 40) return 'silver';
+  if (score >= 20) return 'bronze';
+  return 'new';
 };

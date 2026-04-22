@@ -175,6 +175,8 @@ pub fn update_profile(
 /// - Removes username reverse-lookup entry
 /// - Removes creator from leaderboard (if present)
 /// - Decrements total creators counter
+/// - Resets per-creator and per-tipper tip index entries in temporary storage
+///   (prevents index collisions on re-registration)
 /// - Emits ProfileDeregistered event
 ///
 /// # Errors
@@ -206,7 +208,12 @@ pub fn deregister_profile(env: &Env, caller: Address) -> Result<(), ContractErro
     // 4.5: Leaderboard removal
     crate::leaderboard::remove_from_leaderboard(env, &caller);
 
-    // 4.6: Event emission
+    // 4.6: Tip index cleanup — reset temporary storage indices so that
+    // stale counts cannot cause index collisions on re-registration.
+    storage::reset_creator_tip_index(env, &caller);
+    storage::reset_tipper_tip_index(env, &caller);
+
+    // 4.7: Event emission
     events::emit_profile_deregistered(env, &caller, &profile.username);
 
     Ok(())

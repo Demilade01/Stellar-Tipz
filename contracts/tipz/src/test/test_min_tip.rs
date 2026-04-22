@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use soroban_sdk::{testutils::Address as _, token, Address, Env, String};
+use soroban_sdk::{testutils::{Address as _, Events}, token, Address, Env, String};
 
 use crate::errors::ContractError;
 use crate::TipzContract;
@@ -90,4 +90,75 @@ fn test_admin_can_update_min_tip_amount() {
 
     client.set_min_tip_amount(&admin, &2_000_000_i128);
     assert_eq!(client.get_min_tip_amount(), 2_000_000_i128);
+}
+
+macro_rules! assert_topic {
+    ($val:expr, $sym:expr) => {
+        assert!(
+            $sym.to_val().shallow_eq(&$val),
+            "topic mismatch: expected {:?}",
+            stringify!($sym)
+        );
+    };
+}
+
+#[test]
+fn test_set_min_tip_emits_event_with_old_and_new() {
+    let (env, client, _contract_id, admin, _tipper, _creator, _sac) = setup_env();
+
+    let old_min = client.get_min_tip_amount();
+    let new_min = 2_000_000_i128;
+
+    client.set_min_tip_amount(&admin, &new_min);
+
+    let events = env.events().all();
+    assert!(!events.is_empty(), "expected tip/min event to be emitted");
+
+    let last_event = events.last().unwrap();
+    let (_contract, topics, data) = last_event;
+
+    assert_eq!(topics.len(), 2);
+    assert_topic!(topics.get(0).unwrap(), soroban_sdk::symbol_short!("tip"));
+    assert_topic!(topics.get(1).unwrap(), soroban_sdk::symbol_short!("min"));
+
+    let (emitted_old, emitted_new): (i128, i128) =
+        soroban_sdk::FromVal::from_val(&env, &data);
+    assert_eq!(emitted_old, old_min, "old_min in event mismatch");
+    assert_eq!(emitted_new, new_min, "new_min in event mismatch");
+}
+
+#[test]
+fn test_set_min_tip_event_old_value_tracks_previous_update() {
+    let (env, client, _contract_id, admin, _tipper, _creator, _sac) = setup_env();
+
+    // First update: default -> 2_000_000
+    client.set_min_tip_amount(&admin, &2_000_000_i128);
+    // Second update: 2_000_000 -> 5_000_000
+    client.set_min_tip_amount(&admin, &5_000_000_i128);
+
+    let events = env.events().all();
+    let last_event = events.last().unwrap();
+    let (_contract, topics, data) = last_event;
+
+    assert_topic!(topics.get(0).unwrap(), soroban_sdk::symbol_short!("tip"));
+    assert_topic!(topics.get(1).unwrap(), soroban_sdk::symbol_short!("min"));
+
+    let (emitted_old, emitted_new): (i128, i128) =
+        soroban_sdk::FromVal::from_val(&env, &data);
+    assert_eq!(emitted_old, 2_000_000_i128, "old value should be 2_000_000");
+    assert_eq!(emitted_new, 5_000_000_i128, "new value should be 5_000_000");
+}
+
+#[test]
+fn test_set_min_tip_non_admin_rejected() {
+    let (_env, client, _contract_id, _admin, tipper, _creator, _sac) = setup_env();
+    let res = client.try_set_min_tip_amount(&tipper, &2_000_000_i128);
+    assert!(res.is_err());
+}
+
+#[test]
+fn test_set_min_tip_negative_amount_rejected() {
+    let (_env, client, _contract_id, admin, _tipper, _creator, _sac) = setup_env();
+    let res = client.try_set_min_tip_amount(&admin, &-1_i128);
+    assert_eq!(res, Err(Ok(ContractError::InvalidAmount)));
 }

@@ -9,7 +9,7 @@
 ### `initialize`
 
 ```rust
-fn initialize(env: Env, admin: Address, fee_collector: Address, fee_bps: u32)
+fn initialize(env: Env, admin: Address, fee_collector: Address, fee_bps: u32, native_token: Address)
 ```
 
 | Param | Type | Description |
@@ -17,6 +17,7 @@ fn initialize(env: Env, admin: Address, fee_collector: Address, fee_bps: u32)
 | `admin` | `Address` | Contract administrator |
 | `fee_collector` | `Address` | Receives withdrawal fees |
 | `fee_bps` | `u32` | Fee in basis points (200 = 2%) |
+| `native_token` | `Address` | Stellar Asset Contract address for native XLM |
 
 **Auth**: None (first call only)  
 **Errors**: `AlreadyInitialized`
@@ -68,15 +69,57 @@ fn update_profile(
 fn update_x_metrics(
     env: Env,
     caller: Address,
-    target: Address,
-    followers: u32,
-    posts: u32,
-    replies: u32,
-)
+    creator: Address,
+    x_followers: u32,
+    x_engagement_avg: u32,
+) -> Result<(), ContractError>
 ```
 
-**Auth**: `caller` (must be admin)  
+**Auth**: `caller` (must be admin)
 **Errors**: `NotAdmin`, `NotRegistered`
+
+---
+
+### `batch_update_x_metrics`
+
+```rust
+fn batch_update_x_metrics(
+    env: Env,
+    caller: Address,
+    updates: Vec<(Address, u32, u32)>,
+) -> Result<Vec<BatchSkip>, ContractError>
+```
+
+Updates X metrics for up to 50 creators in a single transaction. Each tuple is `(creator, x_followers, x_engagement_avg)`.
+
+Entries are skipped when the address is not registered (`reason = 0`) or when metric values exceed allowed bounds (`reason = 1`). Returns a `Vec<BatchSkip>` describing each skipped entry.
+
+```rust
+struct BatchSkip {
+    address: Address,
+    reason: u32,  // 0 = not registered, 1 = invalid metrics
+}
+```
+
+**Auth**: `caller` (must be admin)
+**Errors**: `NotAdmin`, `BatchTooLarge` (> 50 entries)
+
+---
+
+### `batch_update_x_metrics_preview`
+
+```rust
+fn batch_update_x_metrics_preview(
+    env: Env,
+    caller: Address,
+    updates: Vec<(Address, u32, u32)>,
+) -> Result<Vec<BatchSkip>, ContractError>
+```
+
+Dry-run version of `batch_update_x_metrics`. Returns the same `Vec<BatchSkip>` that the live call would skip, without modifying any state.
+
+**Auth**: `caller` (must be admin)
+**Errors**: `NotAdmin`, `BatchTooLarge`
 
 ---
 
@@ -140,9 +183,17 @@ fn withdraw_tips(env: Env, caller: Address, amount: i128)
 fn calculate_credit_score(env: Env, address: Address) -> u32
 ```
 
-**Auth**: None  
-**Errors**: `NotRegistered`  
-**Returns**: Score 0-1000
+**Auth**: None
+**Errors**: `NotRegistered`
+**Returns**: Score 0-100
+
+| Tier    | Score range | Description                          |
+|---------|-------------|--------------------------------------|
+| New     | 0 – 19      | No activity yet                      |
+| Bronze  | 20 – 39     | Early-stage creator                  |
+| Silver  | 40 – 59     | Default for newly registered profiles |
+| Gold    | 60 – 79     | Established creator                  |
+| Diamond | 80 – 100    | Elite creator                        |
 
 ---
 

@@ -103,6 +103,21 @@ pub struct CreditBreakdown {
     pub total: u32,
 }
 
+/// A single skipped entry from a batch X-metrics update, including the reason.
+///
+/// | `reason` | Meaning                       |
+/// |----------|-------------------------------|
+/// | `0`      | Address is not registered     |
+/// | `1`      | Metric values failed validation |
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct BatchSkip {
+    /// The address that was skipped
+    pub address: Address,
+    /// Reason code: 0 = not registered, 1 = invalid metrics
+    pub reason: u32,
+}
+
 /// Global contract statistics.
 #[contracttype]
 #[derive(Clone, Debug)]

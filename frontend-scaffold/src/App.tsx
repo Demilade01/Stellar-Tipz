@@ -8,11 +8,11 @@ import ErrorBoundary from '@/components/shared/ErrorBoundary';
 import ToastContainer from '@/components/shared/ToastContainer';
 import { routes } from '@/routes';
 
-const App: React.FC = () => {
+const AppRoutes: React.FC = () => {
   const routeElements = useRoutes(routes);
 
   return (
-    <BrowserRouter>
+    <>
       <ScrollToTop />
       <ErrorBoundary>
         <div className="min-h-screen flex flex-col bg-white dark:bg-black">
@@ -30,6 +30,14 @@ const App: React.FC = () => {
         </div>
       </ErrorBoundary>
       <ToastContainer />
+    </>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <BrowserRouter>
+      <AppRoutes />
     </BrowserRouter>
   );
 };

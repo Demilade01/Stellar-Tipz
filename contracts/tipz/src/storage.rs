@@ -453,6 +453,46 @@ pub fn add_creator_tip(env: &Env, creator: &Address, tip_id: u32) {
     set_tip_ttl(env, &count_key);
 }
 
+/// Remove all per-creator tip index entries from temporary storage.
+///
+/// Called during `deregister_profile` to prevent stale `CreatorTipCount` from
+/// causing index collisions when the same address re-registers later.
+pub fn reset_creator_tip_index(env: &Env, creator: &Address) {
+    let count = get_creator_tip_count(env, creator);
+    let mut i: u32 = 0;
+    while i < count {
+        let key = DataKey::CreatorTip(creator.clone(), i);
+        if env.storage().temporary().has(&key) {
+            env.storage().temporary().remove(&key);
+        }
+        i += 1;
+    }
+    let count_key = DataKey::CreatorTipCount(creator.clone());
+    if env.storage().temporary().has(&count_key) {
+        env.storage().temporary().remove(&count_key);
+    }
+}
+
+/// Remove all per-tipper tip index entries from temporary storage.
+///
+/// Called during `deregister_profile` to prevent stale `TipperTipCount` from
+/// causing index collisions when the same address re-registers later.
+pub fn reset_tipper_tip_index(env: &Env, tipper: &Address) {
+    let count = get_tipper_tip_count(env, tipper);
+    let mut i: u32 = 0;
+    while i < count {
+        let key = DataKey::TipperTip(tipper.clone(), i);
+        if env.storage().temporary().has(&key) {
+            env.storage().temporary().remove(&key);
+        }
+        i += 1;
+    }
+    let count_key = DataKey::TipperTipCount(tipper.clone());
+    if env.storage().temporary().has(&count_key) {
+        env.storage().temporary().remove(&count_key);
+    }
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Creator counter
 // ──────────────────────────────────────────────────────────────────────────────
