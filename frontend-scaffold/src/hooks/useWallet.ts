@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useEffect, useRef } from "react";
 import {
   StellarWalletsKit,
   WalletNetwork,
@@ -7,6 +7,7 @@ import {
   AlbedoModule,
   xBullModule,
 } from "@creit.tech/stellar-wallets-kit";
+import { signTx } from "../helpers/network";
 import { useWalletStore } from "../store/walletStore";
 
 interface Freighter {
@@ -17,8 +18,40 @@ interface Freighter {
 let kitInstance: StellarWalletsKit | null = null;
 let currentNetwork: WalletNetwork | null = null;
 
+type DisposableWalletKit = StellarWalletsKit & {
+  closeModal?: () => void;
+  disconnect?: () => void | Promise<void>;
+  destroy?: () => void;
+  removeAllListeners?: () => void;
+};
+
+const disposeKit = (kit: StellarWalletsKit | null) => {
+  const disposableKit = kit as DisposableWalletKit | null;
+  if (!disposableKit) return;
+
+  try {
+    disposableKit.closeModal?.();
+  } catch (error) {
+    console.warn("Failed to close wallet modal during cleanup:", error);
+  }
+
+  try {
+    void disposableKit.disconnect?.();
+  } catch (error) {
+    console.warn("Failed to disconnect wallet kit during cleanup:", error);
+  }
+
+  try {
+    disposableKit.removeAllListeners?.();
+    disposableKit.destroy?.();
+  } catch (error) {
+    console.warn("Failed to fully dispose wallet kit during cleanup:", error);
+  }
+};
+
 const getKit = (network: WalletNetwork) => {
   if (!kitInstance || currentNetwork !== network) {
+    disposeKit(kitInstance);
     kitInstance = new StellarWalletsKit({
       network,
       selectedWalletId: FREIGHTER_ID,
@@ -29,23 +62,81 @@ const getKit = (network: WalletNetwork) => {
   return kitInstance;
 };
 
+const AUTO_RECONNECT_TIMEOUT_MS = 5000;
+
 export const useWallet = () => {
   const {
     publicKey,
     connected,
     connecting,
+    isReconnecting,
     error,
     network,
+    walletType,
+    signingStatus,
     connect,
     disconnect,
     setConnecting,
+    setReconnecting,
     setError,
     setNetwork: storeSetNetwork,
+    setSigningStatus,
   } = useWalletStore();
 
   const kitNetwork =
     network === "PUBLIC" ? WalletNetwork.PUBLIC : WalletNetwork.TESTNET;
   const kit = useMemo(() => getKit(kitNetwork), [kitNetwork]);
+
+  // Auto-reconnect on mount if a previous session exists
+  const hasAttemptedReconnect = useRef(false);
+  useEffect(() => {
+    if (hasAttemptedReconnect.current) return;
+    hasAttemptedReconnect.current = true;
+
+    if (!walletType || connected) return;
+
+    let cancelled = false;
+    const timeoutId = setTimeout(() => {
+      if (!cancelled) {
+        console.warn("Auto-reconnect timed out");
+        setReconnecting(false);
+        disconnect();
+      }
+    }, AUTO_RECONNECT_TIMEOUT_MS);
+
+    setReconnecting(true);
+
+    (async () => {
+      try {
+        kit.setWallet(walletType);
+        const { address } = await kit.getAddress();
+        if (!cancelled) {
+          connect(address, walletType);
+        }
+      } catch (err) {
+        console.warn(
+          "Auto-reconnect failed — wallet extension may be unavailable:",
+          err,
+        );
+        if (!cancelled) {
+          // Clear persisted state so we don't retry on next load
+          disconnect();
+        }
+      } finally {
+        clearTimeout(timeoutId);
+        if (!cancelled) {
+          setReconnecting(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const actions = useMemo(
     () => ({
@@ -61,10 +152,12 @@ export const useWallet = () => {
 
                 // Automatic network detection for better UX
                 try {
-                  // If it's Freighter, check its current network
-                  const freighterWindow = window as unknown as { freighter?: Freighter };
+                  const freighterWindow = window as unknown as {
+                    freighter?: Freighter;
+                  };
                   if (option.id === FREIGHTER_ID && freighterWindow.freighter) {
-                    const networkDetails = await freighterWindow.freighter.getNetwork();
+                    const networkDetails =
+                      await freighterWindow.freighter.getNetwork();
                     const detectedNetwork =
                       networkDetails === "PUBLIC" ? "PUBLIC" : "TESTNET";
                     if (detectedNetwork !== network) {
@@ -75,7 +168,7 @@ export const useWallet = () => {
                   console.warn("Network auto-detection failed:", e);
                 }
 
-                connect(address);
+                connect(address, option.id);
               } catch (err) {
                 console.error("Wallet connection failed:", err);
                 setError(
@@ -100,10 +193,29 @@ export const useWallet = () => {
       },
 
       signTransaction: async (xdr: string): Promise<string> => {
-        const { signedTxXdr } = await kit.signTransaction(xdr, {
-          address: publicKey ?? undefined,
-        });
-        return signedTxXdr;
+        if (!publicKey) {
+          throw new Error(
+            "Please connect your wallet before signing transactions",
+          );
+        }
+
+        setSigningStatus("signing");
+        try {
+          const signed = await signTx(xdr, publicKey, kit);
+          setSigningStatus("signed");
+          return signed;
+        } catch (err) {
+          setSigningStatus("error");
+          const message = err instanceof Error ? err.message : String(err);
+          // Normalise rejection/cancellation messages
+          if (/cancel|reject|denied|declined|closed/i.test(message)) {
+            throw new Error("Transaction rejected by user", { cause: err });
+          }
+          throw err;
+        } finally {
+          // Reset to idle after a short delay so consumers can react to the state
+          setTimeout(() => setSigningStatus("idle"), 1500);
+        }
       },
     }),
     [
@@ -113,13 +225,34 @@ export const useWallet = () => {
       setConnecting,
       setError,
       storeSetNetwork,
+      setSigningStatus,
       kit,
       network,
     ],
   );
 
   return useMemo(
-    () => ({ publicKey, connected, connecting, error, network, ...actions }),
-    [publicKey, connected, connecting, error, network, actions]
+    () => ({
+      publicKey,
+      connected,
+      connecting,
+      isReconnecting,
+      error,
+      network,
+      walletType,
+      signingStatus,
+      ...actions,
+    }),
+    [
+      publicKey,
+      connected,
+      connecting,
+      isReconnecting,
+      error,
+      network,
+      walletType,
+      signingStatus,
+      actions,
+    ],
   );
 };

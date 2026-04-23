@@ -426,7 +426,7 @@ fn test_batch_update_skips_unregistered() {
     assert_eq!(
         skipped.get(0).unwrap(),
         BatchSkip {
-            address: unregistered,
+            address: unregistered.clone(),
             reason: 0,
         }
     );
@@ -459,14 +459,14 @@ fn test_batch_update_returns_all_skipped_addresses() {
     assert_eq!(
         skipped.get(0).unwrap(),
         BatchSkip {
-            address: unreg1,
+            address: unreg1.clone(),
             reason: 0,
         }
     );
     assert_eq!(
         skipped.get(1).unwrap(),
         BatchSkip {
-            address: unreg2,
+            address: unreg2.clone(),
             reason: 0,
         }
     );
@@ -523,7 +523,7 @@ fn test_batch_update_preview_returns_skipped() {
     assert_eq!(
         skipped.get(0).unwrap(),
         BatchSkip {
-            address: unregistered,
+            address: unregistered.clone(),
             reason: 0,
         }
     );

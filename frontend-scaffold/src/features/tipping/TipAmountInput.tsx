@@ -1,72 +1,43 @@
-import React, { useEffect, useMemo, useState } from "react";
+import BigNumber from "bignumber.js";
+import React, { useEffect, useState } from "react";
 
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import { env } from "../../helpers/env";
-import { useWallet, useContract } from "../../hooks";
+import {
+  stroopToXlm,
+  xlmToStroop,
+  formatXlmDisplay,
+} from "../../helpers/format";
+import { useWallet, useContract, useBalance } from "../../hooks";
+import { BASE_FEE } from "../../services";
+import FeeBreakdown from "./FeeBreakdown";
+import Skeleton from "../../components/ui/Skeleton";
 
 interface TipAmountInputProps {
   amount: string;
   onChange: (amount: string) => void;
-  balance?: string;
 }
 
 const QUICK_AMOUNTS = ["1", "5", "10", "25", "50"];
 const DEFAULT_MIN_TIP_XLM = "0.1"; // 1,000,000 stroops
+const ESTIMATED_NETWORK_FEE_XLM = new BigNumber(stroopToXlm(BASE_FEE, 5));
 
-const TipAmountInput: React.FC<TipAmountInputProps> = ({ amount, onChange, balance }) => {
+const TipAmountInput: React.FC<TipAmountInputProps> = ({
+  amount,
+  onChange,
+}) => {
   const { connected, publicKey } = useWallet();
   const { getMinTipAmount } = useContract();
   const [useCustom, setUseCustom] = useState(!QUICK_AMOUNTS.includes(amount));
-  const [fetchedBalance, setFetchedBalance] = useState<string>("");
   const [minTipXlm, setMinTipXlm] = useState<string>(DEFAULT_MIN_TIP_XLM);
-  const [loadingMinTip, setLoadingMinTip] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-
-    const fetchBalance = async () => {
-      if (!connected || !publicKey) {
-        if (active) {
-          setFetchedBalance("");
-        }
-        return;
-      }
-
-      try {
-        const response = await fetch(`${env.horizonUrl}/accounts/${publicKey}`);
-        if (!response.ok) {
-          return;
-        }
-
-        const data = await response.json();
-        const nativeBalance = Array.isArray(data.balances)
-          ? data.balances.find((entry: { asset_type?: string; balance?: string }) => entry.asset_type === "native")
-          : undefined;
-
-        if (active && nativeBalance?.balance) {
-          setFetchedBalance(nativeBalance.balance);
-        }
-      } catch {
-        if (active) {
-          setFetchedBalance("");
-        }
-      }
-    };
-
-    void fetchBalance();
-
-    return () => {
-      active = false;
-    };
-  }, [connected, publicKey]);
+  const { balance: fetchedBalance, loading } = useBalance(publicKey);
 
   // Fetch minimum tip amount from contract
   useEffect(() => {
     let active = true;
 
     const fetchMinTip = async () => {
-      setLoadingMinTip(true);
       try {
         const minTip = await getMinTipAmount();
         if (active) {
@@ -78,10 +49,6 @@ const TipAmountInput: React.FC<TipAmountInputProps> = ({ amount, onChange, balan
         if (active) {
           setMinTipXlm(DEFAULT_MIN_TIP_XLM);
         }
-      } finally {
-        if (active) {
-          setLoadingMinTip(false);
-        }
       }
     };
 
@@ -92,41 +59,58 @@ const TipAmountInput: React.FC<TipAmountInputProps> = ({ amount, onChange, balan
     };
   }, [getMinTipAmount]);
 
-  const effectiveBalance = balance ?? fetchedBalance;
+  const effectiveBalance = fetchedBalance;
   const numericAmount = Number(amount);
   const numericBalance = Number(effectiveBalance);
   const numericMinTip = Number(minTipXlm);
+  const amountBigNumber = Number.isNaN(numericAmount)
+    ? new BigNumber(0)
+    : new BigNumber(amount || "0");
+  const amountInStroops =
+    Number.isNaN(numericAmount) || numericAmount <= 0
+      ? null
+      : xlmToStroop(amount);
+  const platformFeeXlm = amountBigNumber.multipliedBy(0.02);
+  const totalCost = amountBigNumber
+    .plus(platformFeeXlm)
+    .plus(ESTIMATED_NETWORK_FEE_XLM);
+  const balanceBigNumber =
+    !effectiveBalance || Number.isNaN(numericBalance)
+      ? null
+      : new BigNumber(effectiveBalance);
 
-  const amountError = useMemo(() => {
-    if (!amount.trim()) {
-      return "Enter a tip amount.";
-    }
+  let amountError: string | undefined;
 
-    if (Number.isNaN(numericAmount)) {
-      return "Amount must be numeric.";
-    }
-
-    if (numericAmount <= 0) {
-      return "Amount must be greater than 0.";
-    }
-
-    if (numericAmount < numericMinTip) {
-      return `Minimum tip is ${minTipXlm} XLM.`;
-    }
-
-    if (connected && effectiveBalance && !Number.isNaN(numericBalance) && numericAmount > numericBalance) {
-      return "Amount exceeds your available XLM balance.";
-    }
-
-    return undefined;
-  }, [amount, connected, effectiveBalance, numericAmount, numericBalance, minTipXlm, numericMinTip]);
+  if (!amount.trim()) {
+    amountError = "Enter a tip amount.";
+  } else if (Number.isNaN(numericAmount)) {
+    amountError = "Amount must be numeric.";
+  } else if (numericAmount <= 0) {
+    amountError = "Amount must be greater than 0.";
+  } else if (numericAmount < numericMinTip) {
+    amountError = `Minimum tip is ${minTipXlm} XLM.`;
+  } else if (
+    connected &&
+    effectiveBalance &&
+    !Number.isNaN(numericBalance) &&
+    numericAmount > numericBalance
+  ) {
+    amountError = "Amount exceeds your available XLM balance.";
+  } else if (connected && balanceBigNumber && totalCost.gt(balanceBigNumber)) {
+    amountError =
+      "Total cost exceeds your available XLM balance once network fees are included.";
+  }
 
   return (
     <div className="space-y-4">
-      <p className="text-xs font-black uppercase tracking-[0.2em] text-gray-600">Tip amount</p>
+      <p className="text-xs font-black uppercase tracking-[0.2em] text-gray-600">
+        Tip amount
+      </p>
 
       <div className="rounded-md border-2 border-black bg-yellow-100 p-5 text-center">
-        <p className="text-xs font-black uppercase tracking-[0.2em] text-gray-600">Selected amount</p>
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-gray-600">
+          Selected amount
+        </p>
         <p className="mt-2 text-4xl font-black">
           {amount || "0"} <span className="text-2xl">XLM</span>
         </p>
@@ -152,6 +136,7 @@ const TipAmountInput: React.FC<TipAmountInputProps> = ({ amount, onChange, balan
           type="button"
           variant={useCustom ? "primary" : "outline"}
           size="sm"
+          data-tip-amount-trigger="true"
           onClick={() => {
             setUseCustom(true);
             if (QUICK_AMOUNTS.includes(amount)) {
@@ -172,6 +157,7 @@ const TipAmountInput: React.FC<TipAmountInputProps> = ({ amount, onChange, balan
           value={amount}
           onChange={(event) => onChange(event.target.value)}
           error={amountError}
+          data-tip-amount="true"
         />
       )}
 
@@ -179,8 +165,30 @@ const TipAmountInput: React.FC<TipAmountInputProps> = ({ amount, onChange, balan
         <p className="text-sm font-medium text-red-600">{amountError}</p>
       )}
 
+      <FeeBreakdown
+        amountBigNumber={amountBigNumber}
+        amountInStroops={amountInStroops}
+        platformFeeXlm={platformFeeXlm}
+        networkFeeXlm={ESTIMATED_NETWORK_FEE_XLM}
+        totalCost={totalCost}
+        balanceBigNumber={balanceBigNumber}
+        connected={connected}
+      />
+
       <p className="text-sm font-bold text-gray-600">
-        Your balance: {effectiveBalance ? `${Number(effectiveBalance).toLocaleString()} XLM` : "Connect wallet to load balance"}
+        Your balance:{" "}
+        {loading ? (
+          <span
+            className="inline-block align-middle ml-2"
+            data-testid="balance-skeleton"
+          >
+            <Skeleton className="h-4 w-16" />
+          </span>
+        ) : effectiveBalance ? (
+          `${Number(effectiveBalance).toLocaleString()} XLM`
+        ) : (
+          "Connect wallet to load balance"
+        )}
       </p>
     </div>
   );

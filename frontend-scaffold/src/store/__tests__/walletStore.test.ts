@@ -8,8 +8,11 @@ const resetWalletStore = () => {
     publicKey: null,
     connected: false,
     connecting: false,
+    isReconnecting: false,
     error: null,
     network: 'TESTNET',
+    walletType: null,
+    signingStatus: 'idle',
   });
 };
 
@@ -57,7 +60,10 @@ describe('walletStore persistence', () => {
       connected: true,
       network: 'PUBLIC',
       connecting: false,
+      isReconnecting: false,
       error: null,
+      walletType: null,
+      signingStatus: 'idle',
     });
   });
 });
