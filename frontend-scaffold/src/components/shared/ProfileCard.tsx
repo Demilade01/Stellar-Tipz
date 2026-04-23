@@ -4,6 +4,7 @@ import Avatar from '../ui/Avatar';
 import Card from '../ui/Card';
 import CreditBadge from './CreditBadge';
 import AmountDisplay from './AmountDisplay';
+import Skeleton from '../ui/Skeleton';
 
 interface ProfileCardProps {
   handle: string;
@@ -105,3 +106,53 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
 };
 
 export default ProfileCard;
+
+export const ProfileCardSkeleton: React.FC<{ variant?: 'default' | 'compact' }> = ({ variant = 'default' }) => {
+  if (variant === 'compact') {
+    return (
+      <div role="status" aria-busy="true" className="w-64 flex-shrink-0">
+        <Card padding="sm" className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <Skeleton variant="circle" width={40} height={40} />
+            <Skeleton variant="text" width={28} height={20} />
+          </div>
+          <div className="space-y-2">
+            <Skeleton variant="text" width="70%" height={18} />
+            <Skeleton variant="text" width="55%" height={14} />
+          </div>
+          <Skeleton variant="rect" width="100%" height={36} />
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      role="status"
+      aria-busy="true"
+      className="w-full max-w-sm bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden"
+    >
+      <div className="h-24 bg-gradient-to-r from-blue-500/20 to-indigo-600/20" />
+      <div className="px-6 pb-6 text-center">
+        <div className="relative -mt-12 mb-4 flex justify-center">
+          <Skeleton variant="circle" width={96} height={96} className="border-4 border-white" />
+        </div>
+        <div className="flex flex-col items-center gap-3">
+          <Skeleton variant="text" width="55%" height={22} />
+          <div className="flex items-center justify-center gap-2">
+            <Skeleton variant="rect" width={140} height={28} />
+            <Skeleton variant="rect" width={28} height={28} />
+          </div>
+        </div>
+        <div className="mt-5 space-y-2">
+          <Skeleton variant="text" width="90%" height={14} />
+          <Skeleton variant="text" width="80%" height={14} />
+          <Skeleton variant="text" width="70%" height={14} />
+        </div>
+        <div className="mt-6">
+          <Skeleton variant="rect" width="100%" height={44} />
+        </div>
+      </div>
+    </div>
+  );
+};

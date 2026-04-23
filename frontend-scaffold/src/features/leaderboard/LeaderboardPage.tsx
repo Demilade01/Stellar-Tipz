@@ -8,7 +8,6 @@ import CreditBadge from "../../components/shared/CreditBadge";
 import Avatar from "../../components/ui/Avatar";
 import Card from "../../components/ui/Card";
 import Pagination from "../../components/ui/Pagination";
-import Loader from "../../components/ui/Loader";
 import ErrorState from "../../components/shared/ErrorState";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import type { LeaderboardEntry } from "@/types";
@@ -90,6 +89,10 @@ const LeaderboardPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const totalPages = Math.ceil(entries.length / PAGE_SIZE);
 
+  if (loading && entries.length === 0 && !error) {
+    return <LeaderboardSkeleton count={PAGE_SIZE} />;
+  }
+
   const visibleEntries = useMemo(() => {
     const startIndex = (currentPage - 1) * PAGE_SIZE;
     return entries.slice(startIndex, startIndex + PAGE_SIZE);
@@ -115,10 +118,6 @@ const LeaderboardPage: React.FC = () => {
           {error ? (
             <div className="sm:col-span-3">
               <ErrorState category={categorizeError(error)} onRetry={refetch} />
-            </div>
-          ) : loading && entries.length === 0 ? (
-            <div className="sm:col-span-3 flex justify-center py-12">
-              <Loader size="lg" text="Loading leaderboard..." />
             </div>
           ) : (
             entries.slice(0, 3).map((entry, index) => {
@@ -158,11 +157,7 @@ const LeaderboardPage: React.FC = () => {
           </div>
 
           <div className="overflow-x-auto">
-            {loading && entries.length === 0 ? (
-              <div className="flex justify-center py-20">
-                <Loader size="lg" text="Fetching rankings..." />
-              </div>
-            ) : entries.length === 0 ? (
+            {entries.length === 0 ? (
               <div className="text-center py-20 border-2 border-dashed border-black">
                 <p className="font-black uppercase text-gray-500">No creators found on the leaderboard yet.</p>
               </div>

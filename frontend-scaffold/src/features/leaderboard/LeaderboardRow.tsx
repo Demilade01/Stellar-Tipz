@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import AmountDisplay from "../../components/shared/AmountDisplay";
 import CreditBadge from "../../components/shared/CreditBadge";
 import Avatar from "../../components/ui/Avatar";
+import Skeleton from "../../components/ui/Skeleton";
 import { useWalletStore } from "../../store";
 import type { LeaderboardEntry } from "../../types/contract";
 
@@ -70,3 +71,26 @@ const LeaderboardRow: React.FC<LeaderboardRowProps> = ({ entry, rank }) => {
 };
 
 export default LeaderboardRow;
+
+export const LeaderboardRowSkeleton: React.FC = () => {
+  return (
+    <tr role="status" aria-busy="true" className="border-b border-gray-300">
+      <td className="px-4 py-4 text-sm font-black tabular-nums text-gray-300">#—</td>
+      <td className="px-4 py-4">
+        <div className="flex items-center gap-3">
+          <Skeleton variant="circle" width={40} height={40} />
+          <Skeleton variant="text" width="120px" height={16} />
+        </div>
+      </td>
+      <td className="px-4 py-4 text-right">
+        <Skeleton variant="text" width="80px" height={16} className="ml-auto" />
+      </td>
+      <td className="px-4 py-4">
+        <div className="flex items-center gap-2">
+          <Skeleton variant="circle" width={16} height={16} />
+          <Skeleton variant="rect" width={36} height={18} />
+        </div>
+      </td>
+    </tr>
+  );
+};

@@ -7,12 +7,13 @@ import ErrorState from "@/components/shared/ErrorState";
 import WalletConnect from "@/components/shared/WalletConnect";
 import Button from "@/components/ui/Button";
 import EmptyState from "@/components/ui/EmptyState";
-import Loader from "@/components/ui/Loader";
 import Tabs from "@/components/ui/Tabs";
 import { categorizeError } from "@/helpers/error";
 import { useDashboard } from "@/hooks/useDashboard";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useWalletStore } from "@/store/walletStore";
+import Skeleton from "@/components/ui/Skeleton";
+import DashboardStatsSkeleton from "./DashboardStatsSkeleton";
 
 import EarningsTab from "./EarningsTab";
 import OverviewTab from "./OverviewTab";
@@ -56,9 +57,26 @@ const DashboardPage: React.FC = () => {
     return (
       <PageContainer
         maxWidth="xl"
-        className="flex min-h-[60vh] flex-col items-center justify-center gap-4 py-10"
+        className="space-y-8 py-10"
+        aria-busy="true"
       >
-        <Loader size="lg" text="Loading dashboard data..." />
+        <section className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <Skeleton variant="text" width="200px" height="12px" />
+            <div className="mt-2">
+              <Skeleton variant="text" width="260px" height="34px" />
+            </div>
+          </div>
+          <Skeleton variant="rect" width="220px" height="44px" />
+        </section>
+
+        <DashboardStatsSkeleton />
+
+        <div role="status" aria-busy="true" className="border-4 border-black bg-white p-6 shadow-brutalist space-y-3">
+          <Skeleton variant="text" width="180px" height="18px" />
+          <Skeleton variant="text" width="90%" height="14px" />
+          <Skeleton variant="text" width="80%" height="14px" />
+        </div>
       </PageContainer>
     );
   }
