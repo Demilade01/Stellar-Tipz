@@ -25,6 +25,20 @@ if (!("IntersectionObserver" in window)) {
   });
 }
 
+// Recharts (ResponsiveContainer) depends on ResizeObserver in the DOM environment.
+if (!("ResizeObserver" in window)) {
+  class MockResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  Object.defineProperty(window, "ResizeObserver", {
+    writable: true,
+    configurable: true,
+    value: MockResizeObserver,
+  });
+}
+
 const mockWalletKit = {
   openModal: vi.fn(),
   setWallet: vi.fn(),
@@ -47,4 +61,15 @@ vi.mock("@creit.tech/stellar-wallets-kit", () => ({
   AlbedoModule: vi.fn(function MockAlbedoModule() {}),
   xBullModule: vi.fn(function MockXBullModule() {}),
   __mockWalletKit: mockWalletKit,
+}));
+
+vi.mock("@stellar/stellar-sdk", () => ({
+  Contract: vi.fn(),
+  TimeoutInfinite: 0,
+  nativeToScVal: vi.fn(),
+  xdr: {},
+  Networks: {
+    TESTNET: "Test SDF Network ; September 2015",
+    PUBLIC: "Public Global Stellar Network ; September 2015",
+  },
 }));

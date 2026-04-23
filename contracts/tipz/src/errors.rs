@@ -58,4 +58,6 @@ pub enum ContractError {
     NotVerified = 25,
     /// Caller is not the contract admin
     Unauthorized = 26,
+    /// X handle is invalid (must be 1-16 chars, @?alphanumeric + underscore)
+    InvalidXHandle = 24,
 }
