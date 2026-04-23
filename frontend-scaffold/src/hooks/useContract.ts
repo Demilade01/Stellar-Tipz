@@ -11,6 +11,7 @@ import { env } from "../helpers/env";
 import {
   getServer,
   getTxBuilder,
+  getSimulationTxBuilder,
   simulateTx,
   submitTx,
   accountToScVal,
@@ -86,10 +87,9 @@ export const useContract = () => {
   const getProfile = useCallback(
     async (address: string): Promise<Profile> => {
       const contract = new Contract(contractId);
-      const txBuilder = await getTxBuilder(
+      const txBuilder = getSimulationTxBuilder(
         address,
         BASE_FEE,
-        server,
         networkDetails.networkPassphrase,
       );
       const tx = txBuilder
@@ -105,12 +105,18 @@ export const useContract = () => {
   const getProfileByUsername = useCallback(
     async (username: string): Promise<Profile> => {
       const contract = new Contract(contractId);
-      const txBuilder = await getTxBuilder(
-        wallet.publicKey || READ_ONLY_SOURCE,
-        BASE_FEE,
-        server,
-        networkDetails.networkPassphrase,
-      );
+      const txBuilder = wallet.publicKey
+        ? await getTxBuilder(
+            wallet.publicKey,
+            BASE_FEE,
+            server,
+            networkDetails.networkPassphrase,
+          )
+        : getSimulationTxBuilder(
+            READ_ONLY_SOURCE,
+            BASE_FEE,
+            networkDetails.networkPassphrase,
+          );
       const tx = txBuilder
         .addOperation(
           contract.call("get_profile_by_username", nativeToScVal(username)),
@@ -126,12 +132,18 @@ export const useContract = () => {
   const getLeaderboard = useCallback(
     async (limit: number): Promise<LeaderboardEntry[]> => {
       const contract = new Contract(contractId);
-      const txBuilder = await getTxBuilder(
-        wallet.publicKey || READ_ONLY_SOURCE,
-        BASE_FEE,
-        server,
-        networkDetails.networkPassphrase,
-      );
+      const txBuilder = wallet.publicKey
+        ? await getTxBuilder(
+            wallet.publicKey,
+            BASE_FEE,
+            server,
+            networkDetails.networkPassphrase,
+          )
+        : getSimulationTxBuilder(
+            READ_ONLY_SOURCE,
+            BASE_FEE,
+            networkDetails.networkPassphrase,
+          );
       const tx = txBuilder
         .addOperation(
           contract.call(
@@ -153,12 +165,18 @@ export const useContract = () => {
     }
 
     const contract = new Contract(contractId);
-    const txBuilder = await getTxBuilder(
-      wallet.publicKey || READ_ONLY_SOURCE,
-      BASE_FEE,
-      server,
-      networkDetails.networkPassphrase,
-    );
+    const txBuilder = wallet.publicKey
+      ? await getTxBuilder(
+          wallet.publicKey,
+          BASE_FEE,
+          server,
+          networkDetails.networkPassphrase,
+        )
+      : getSimulationTxBuilder(
+          READ_ONLY_SOURCE,
+          BASE_FEE,
+          networkDetails.networkPassphrase,
+        );
     const tx = txBuilder
       .addOperation(contract.call("get_stats"))
       .setTimeout(TimeoutInfinite)
@@ -176,12 +194,18 @@ export const useContract = () => {
 
     try {
       const contract = new Contract(contractId);
-      const txBuilder = await getTxBuilder(
-        wallet.publicKey || READ_ONLY_SOURCE,
-        BASE_FEE,
-        server,
-        networkDetails.networkPassphrase,
-      );
+      const txBuilder = wallet.publicKey
+        ? await getTxBuilder(
+            wallet.publicKey,
+            BASE_FEE,
+            server,
+            networkDetails.networkPassphrase,
+          )
+        : getSimulationTxBuilder(
+            READ_ONLY_SOURCE,
+            BASE_FEE,
+            networkDetails.networkPassphrase,
+          );
       const tx = txBuilder
         .addOperation(contract.call("get_min_tip_amount"))
         .setTimeout(TimeoutInfinite)
@@ -197,12 +221,18 @@ export const useContract = () => {
   const getRecentTips = useCallback(
     async (creator: string, limit: number, offset: number): Promise<Tip[]> => {
       const contract = new Contract(contractId);
-      const txBuilder = await getTxBuilder(
-        wallet.publicKey || READ_ONLY_SOURCE,
-        BASE_FEE,
-        server,
-        networkDetails.networkPassphrase,
-      );
+      const txBuilder = wallet.publicKey
+        ? await getTxBuilder(
+            wallet.publicKey,
+            BASE_FEE,
+            server,
+            networkDetails.networkPassphrase,
+          )
+        : getSimulationTxBuilder(
+            READ_ONLY_SOURCE,
+            BASE_FEE,
+            networkDetails.networkPassphrase,
+          );
       const tx = txBuilder
         .addOperation(
           contract.call(
@@ -223,12 +253,18 @@ export const useContract = () => {
   const getCreatorTipCount = useCallback(
     async (creator: string): Promise<number> => {
       const contract = new Contract(contractId);
-      const txBuilder = await getTxBuilder(
-        wallet.publicKey || READ_ONLY_SOURCE,
-        BASE_FEE,
-        server,
-        networkDetails.networkPassphrase,
-      );
+      const txBuilder = wallet.publicKey
+        ? await getTxBuilder(
+            wallet.publicKey,
+            BASE_FEE,
+            server,
+            networkDetails.networkPassphrase,
+          )
+        : getSimulationTxBuilder(
+            READ_ONLY_SOURCE,
+            BASE_FEE,
+            networkDetails.networkPassphrase,
+          );
       const tx = txBuilder
         .addOperation(
           contract.call("get_creator_tip_count", accountToScVal(creator)),
@@ -244,12 +280,18 @@ export const useContract = () => {
   const getTipsByTipper = useCallback(
     async (tipper: string, limit: number): Promise<Tip[]> => {
       const contract = new Contract(contractId);
-      const txBuilder = await getTxBuilder(
-        wallet.publicKey || READ_ONLY_SOURCE,
-        BASE_FEE,
-        server,
-        networkDetails.networkPassphrase,
-      );
+      const txBuilder = wallet.publicKey
+        ? await getTxBuilder(
+            wallet.publicKey,
+            BASE_FEE,
+            server,
+            networkDetails.networkPassphrase,
+          )
+        : getSimulationTxBuilder(
+            READ_ONLY_SOURCE,
+            BASE_FEE,
+            networkDetails.networkPassphrase,
+          );
       const tx = txBuilder
         .addOperation(
           contract.call(
@@ -269,12 +311,18 @@ export const useContract = () => {
   const getTipperTipCount = useCallback(
     async (tipper: string): Promise<number> => {
       const contract = new Contract(contractId);
-      const txBuilder = await getTxBuilder(
-        wallet.publicKey || READ_ONLY_SOURCE,
-        BASE_FEE,
-        server,
-        networkDetails.networkPassphrase,
-      );
+      const txBuilder = wallet.publicKey
+        ? await getTxBuilder(
+            wallet.publicKey,
+            BASE_FEE,
+            server,
+            networkDetails.networkPassphrase,
+          )
+        : getSimulationTxBuilder(
+            READ_ONLY_SOURCE,
+            BASE_FEE,
+            networkDetails.networkPassphrase,
+          );
       const tx = txBuilder
         .addOperation(
           contract.call("get_tipper_tip_count", accountToScVal(tipper)),

@@ -16,17 +16,22 @@ import { useWalletStore } from "@/store/walletStore";
 import { stroopToXlm } from "@/helpers/format";
 import Skeleton from "@/components/ui/Skeleton";
 import DashboardStatsSkeleton from "./DashboardStatsSkeleton";
+import EarningsChart from "./EarningsChart";
 
 import EarningsTab from "./EarningsTab";
 import OverviewTab from "./OverviewTab";
 import SettingsTab from "./SettingsTab";
 import TipsTab from "./TipsTab";
+import FavoritesList from "./FavoritesList";
+import { DashboardProvider } from "./DashboardContext";
+import TipQRCode from "@/features/profile/TipQRCode";
 
 const DashboardPage: React.FC = () => {
   usePageTitle("Dashboard");
 
   const { connected } = useWalletStore();
-  const { profile, loading, error, refetch } = useDashboard();
+  const dashboard = useDashboard();
+  const { profile, loading, error, refetch, tips } = dashboard;
   const { latestTip, markSeen, unseenCount } = useTipNotifications(
     profile?.owner,
   );
@@ -127,8 +132,15 @@ const DashboardPage: React.FC = () => {
       id: "overview",
       label: "Overview",
       content: (
-        <div className="pt-6">
-          <OverviewTab />
+        <div className="pt-6 space-y-8">
+          <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+            <OverviewTab />
+            <TipQRCode username={creator.username} />
+          </div>
+          <div className="border-4 border-black bg-white p-6 shadow-brutalist">
+            <h3 className="text-xl font-black uppercase mb-4">Earnings History</h3>
+            <EarningsChart tips={tips} />
+          </div>
         </div>
       ),
     },
@@ -147,6 +159,15 @@ const DashboardPage: React.FC = () => {
       content: <EarningsTab />,
     },
     {
+      id: "favorites",
+      label: "Favorites",
+      content: (
+        <div className="pt-6">
+          <FavoritesList />
+        </div>
+      ),
+    },
+    {
       id: "settings",
       label: "Settings",
       content: (
@@ -158,6 +179,7 @@ const DashboardPage: React.FC = () => {
   ];
 
   return (
+    <DashboardProvider value={dashboard}>
     <PageContainer maxWidth="xl" className="space-y-8 py-10">
       <section className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
@@ -213,6 +235,7 @@ const DashboardPage: React.FC = () => {
 
       <Tabs tabs={tabs} defaultTab="overview" />
     </PageContainer>
+    </DashboardProvider>
   );
 };
 
