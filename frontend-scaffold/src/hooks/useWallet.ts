@@ -205,7 +205,7 @@ export const useWallet = () => {
             err instanceof Error ? err.message : String(err);
           // Normalise rejection/cancellation messages
           if (/cancel|reject|denied|declined|closed/i.test(message)) {
-            throw new Error("Transaction rejected by user");
+            throw new Error("Transaction rejected by user", { cause: err });
           }
           throw err;
         } finally {

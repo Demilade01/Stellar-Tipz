@@ -8,7 +8,7 @@ interface WalletSelectionHandler {
   onWalletSelected: (option: { id: string }) => Promise<void>;
 }
 
-const mockWalletKit = (walletKitModule as any).__mockWalletKit as any;
+const mockWalletKit = (walletKitModule as unknown as { __mockWalletKit: Record<string, import("vitest").Mock> }).__mockWalletKit;
 
 // Mock window.freighter
 Object.defineProperty(window, "freighter", {

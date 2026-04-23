@@ -71,7 +71,7 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({ onUploadSuccess, defaultIma
       if (onUploadSuccess) {
         onUploadSuccess(hash);
       }
-    } catch (err) {
+    } catch (_err) {
       setError('Upload to IPFS failed.');
     } finally {
       setIsUploading(false);

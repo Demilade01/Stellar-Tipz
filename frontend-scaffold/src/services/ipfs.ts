@@ -1,4 +1,4 @@
-export const uploadToIPFS = async (file: File): Promise<string> => {
+export const uploadToIPFS = async (_file: File): Promise<string> => {
   // If we had a real backend or Pinata key:
   // const formData = new FormData();
   // formData.append('file', file);
