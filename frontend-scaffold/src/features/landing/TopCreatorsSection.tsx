@@ -4,25 +4,19 @@ import { ArrowRight, Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useContract } from '@/hooks';
 import { LeaderboardEntry } from '@/types/contract';
-import ProfileCard from '@/components/shared/ProfileCard';
-import Skeleton from '@/components/ui/Skeleton';
+import ProfileCard, { ProfileCardSkeleton } from '@/components/shared/ProfileCard';
 import EmptyState from '@/components/ui/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import { categorizeError } from '@/helpers/error';
-import { env } from '@/helpers/env';
 
 export default function TopCreatorsSection() {
   const [creators, setCreators] = useState<LeaderboardEntry[]>([]);
-  const [loading, setLoading] = useState(Boolean(env.contractId));
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { getLeaderboard } = useContract();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!env.contractId) {
-      return;
-    }
-
     let active = true;
     getLeaderboard(5)
       .then((data) => {
@@ -44,13 +38,6 @@ export default function TopCreatorsSection() {
   }, [getLeaderboard]);
 
   const handleRetry = useCallback(() => {
-    if (!env.contractId) {
-      setCreators([]);
-      setError(null);
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     setError(null);
     getLeaderboard(5)
@@ -98,9 +85,7 @@ export default function TopCreatorsSection() {
         {loading ? (
           <div className="flex gap-6 overflow-hidden pb-4">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="w-64 flex-shrink-0">
-                <Skeleton variant="rect" height="200px" />
-              </div>
+              <ProfileCardSkeleton key={i} variant="compact" />
             ))}
           </div>
         ) : error ? (
