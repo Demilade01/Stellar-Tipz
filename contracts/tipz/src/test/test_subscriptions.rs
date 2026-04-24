@@ -1,6 +1,9 @@
 #![cfg(test)]
 
-use soroban_sdk::{testutils::Address as _, token, Address, Env, String};
+use soroban_sdk::{
+    testutils::{Address as _, Ledger as _},
+    token, Address, Env, String,
+};
 
 use crate::errors::ContractError;
 use crate::storage::DataKey;
@@ -52,7 +55,7 @@ fn setup_env() -> (
         updated_at: now,
         verification: crate::types::VerificationStatus {
             is_verified: false,
-            verification_type: None,
+            verification_type: crate::types::VerificationType::Unverified,
             verified_at: None,
             revoked_at: None,
         },
@@ -77,7 +80,7 @@ fn test_create_subscription() {
     assert!(sub.active);
     assert_eq!(sub.amount, 100_000_000);
     assert_eq!(sub.interval_days, 7);
-    
+
     let subs = client.get_subscriptions(&subscriber);
     assert_eq!(subs.len(), 1);
 }
@@ -88,7 +91,7 @@ fn test_cancel_subscription() {
 
     client.create_subscription(&subscriber, &creator, &100_000_000, &7);
     client.cancel_subscription(&subscriber, &creator);
-    
+
     let subs = client.get_subscriptions(&subscriber);
     assert_eq!(subs.len(), 1);
     assert!(!subs.get(0).unwrap().active);
@@ -99,15 +102,16 @@ fn test_execute_due_subscription() {
     let (env, client, contract_id, subscriber, creator, sac) = setup_env();
 
     client.create_subscription(&subscriber, &creator, &100_000_000, &7);
-    
+
     // Advance time
-    env.ledger().set_timestamp(env.ledger().timestamp() + (8 * 86400));
-    
+    env.ledger()
+        .set_timestamp(env.ledger().timestamp() + (8 * 86400));
+
     client.execute_due_subscription(&subscriber, &creator);
-    
+
     let token_client = token::TokenClient::new(&env, &sac);
     assert_eq!(token_client.balance(&contract_id), 100_000_000);
-    
+
     let profile = client.get_profile(&creator);
-    assert_eq!(profile.unwrap().total_tips_received, 100_000_000);
+    assert_eq!(profile.total_tips_received, 100_000_000);
 }
