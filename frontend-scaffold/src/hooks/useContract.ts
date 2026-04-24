@@ -29,6 +29,7 @@ import {
 } from "../types/contract";
 import { ProfileFormData } from "../types/profile";
 import { xlmToStroop } from "../helpers/format";
+import { contractQueryCache, buildContractCacheKey } from "../services/cache";
 
 /**
  * Valid Stellar placeholder address used as the source account for
@@ -37,6 +38,10 @@ import { xlmToStroop } from "../helpers/format";
  */
 const READ_ONLY_SOURCE =
   "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF";
+
+const PROFILE_TTL_MS = 30_000;
+const LEADERBOARD_TTL_MS = 60_000;
+const PLATFORM_STATS_TTL_MS = 120_000;
 
 /**
  * Safely converts a numeric string to a BigInt.
@@ -84,18 +89,31 @@ export const useContract = () => {
 
   const getProfile = useCallback(
     async (address: string): Promise<Profile> => {
-      const contract = new Contract(contractId);
-      const txBuilder = getSimulationTxBuilder(
+      const key = buildContractCacheKey(
+        "get_profile",
+        networkDetails.network,
+        contractId,
         address,
-        BASE_FEE,
-        networkDetails.networkPassphrase,
       );
-      const tx = txBuilder
-        .addOperation(contract.call("get_profile", accountToScVal(address)))
-        .setTimeout(TimeoutInfinite)
-        .build();
 
-      return simulateTx<Profile>(tx, server);
+      return contractQueryCache.getOrFetch<Profile>(
+        key,
+        PROFILE_TTL_MS,
+        async () => {
+          const contract = new Contract(contractId);
+          const txBuilder = getSimulationTxBuilder(
+            address,
+            BASE_FEE,
+            networkDetails.networkPassphrase,
+          );
+          const tx = txBuilder
+            .addOperation(contract.call("get_profile", accountToScVal(address)))
+            .setTimeout(TimeoutInfinite)
+            .build();
+
+          return simulateTx<Profile>(tx, server);
+        },
+      );
     },
     [contractId, server, networkDetails],
   );
@@ -129,30 +147,43 @@ export const useContract = () => {
 
   const getLeaderboard = useCallback(
     async (limit: number): Promise<LeaderboardEntry[]> => {
-      const contract = new Contract(contractId);
-      const txBuilder = wallet.publicKey
-        ? await getTxBuilder(
-            wallet.publicKey,
-            BASE_FEE,
-            server,
-            networkDetails.networkPassphrase,
-          )
-        : getSimulationTxBuilder(
-            READ_ONLY_SOURCE,
-            BASE_FEE,
-            networkDetails.networkPassphrase,
-          );
-      const tx = txBuilder
-        .addOperation(
-          contract.call(
-            "get_leaderboard",
-            nativeToScVal(limit, { type: "u32" }),
-          ),
-        )
-        .setTimeout(TimeoutInfinite)
-        .build();
+      const key = buildContractCacheKey(
+        "get_leaderboard",
+        networkDetails.network,
+        contractId,
+        limit,
+      );
 
-      return simulateTx<LeaderboardEntry[]>(tx, server);
+      return contractQueryCache.getOrFetch<LeaderboardEntry[]>(
+        key,
+        LEADERBOARD_TTL_MS,
+        async () => {
+          const contract = new Contract(contractId);
+          const txBuilder = wallet.publicKey
+            ? await getTxBuilder(
+                wallet.publicKey,
+                BASE_FEE,
+                server,
+                networkDetails.networkPassphrase,
+              )
+            : getSimulationTxBuilder(
+                READ_ONLY_SOURCE,
+                BASE_FEE,
+                networkDetails.networkPassphrase,
+              );
+          const tx = txBuilder
+            .addOperation(
+              contract.call(
+                "get_leaderboard",
+                nativeToScVal(limit, { type: "u32" }),
+              ),
+            )
+            .setTimeout(TimeoutInfinite)
+            .build();
+
+          return simulateTx<LeaderboardEntry[]>(tx, server);
+        },
+      );
     },
     [contractId, wallet.publicKey, server, networkDetails],
   );
@@ -161,25 +192,37 @@ export const useContract = () => {
     if (!contractId) {
       throw new Error("Contract ID is not configured");
     }
-    const contract = new Contract(contractId);
-    const txBuilder = wallet.publicKey
-      ? await getTxBuilder(
-          wallet.publicKey,
-          BASE_FEE,
-          server,
-          networkDetails.networkPassphrase,
-        )
-      : getSimulationTxBuilder(
-          READ_ONLY_SOURCE,
-          BASE_FEE,
-          networkDetails.networkPassphrase,
-        );
-    const tx = txBuilder
-      .addOperation(contract.call("get_stats"))
-      .setTimeout(TimeoutInfinite)
-      .build();
+    const key = buildContractCacheKey(
+      "get_stats",
+      networkDetails.network,
+      contractId,
+    );
 
-    return simulateTx<ContractStats>(tx, server);
+    return contractQueryCache.getOrFetch<ContractStats>(
+      key,
+      PLATFORM_STATS_TTL_MS,
+      async () => {
+        const contract = new Contract(contractId);
+        const txBuilder = wallet.publicKey
+          ? await getTxBuilder(
+              wallet.publicKey,
+              BASE_FEE,
+              server,
+              networkDetails.networkPassphrase,
+            )
+          : getSimulationTxBuilder(
+              READ_ONLY_SOURCE,
+              BASE_FEE,
+              networkDetails.networkPassphrase,
+            );
+        const tx = txBuilder
+          .addOperation(contract.call("get_stats"))
+          .setTimeout(TimeoutInfinite)
+          .build();
+
+        return simulateTx<ContractStats>(tx, server);
+      },
+    );
   }, [contractId, wallet.publicKey, server, networkDetails]);
 
   const getMinTipAmount = useCallback(async (): Promise<string> => {
@@ -374,7 +417,13 @@ export const useContract = () => {
 
       const xdr = tx.toXDR();
       const signedXdr = await wallet.signTransaction(xdr);
-      return submitTx(signedXdr, networkDetails.networkPassphrase, server);
+      const txHash = await submitTx(
+        signedXdr,
+        networkDetails.networkPassphrase,
+        server,
+      );
+      contractQueryCache.invalidateAll();
+      return txHash;
     },
     [contractId, wallet, server, networkDetails],
   );
@@ -416,7 +465,13 @@ export const useContract = () => {
 
       const xdr_tx = tx.toXDR();
       const signedXdr = await wallet.signTransaction(xdr_tx);
-      return submitTx(signedXdr, networkDetails.networkPassphrase, server);
+      const txHash = await submitTx(
+        signedXdr,
+        networkDetails.networkPassphrase,
+        server,
+      );
+      contractQueryCache.invalidateAll();
+      return txHash;
     },
     [contractId, wallet, server, networkDetails],
   );
@@ -455,7 +510,13 @@ export const useContract = () => {
 
       const xdr = tx.toXDR();
       const signedXdr = await wallet.signTransaction(xdr);
-      return submitTx(signedXdr, networkDetails.networkPassphrase, server);
+      const txHash = await submitTx(
+        signedXdr,
+        networkDetails.networkPassphrase,
+        server,
+      );
+      contractQueryCache.invalidateAll();
+      return txHash;
     },
     [contractId, wallet, server, networkDetails],
   );
@@ -488,7 +549,13 @@ export const useContract = () => {
 
       const xdr = tx.toXDR();
       const signedXdr = await wallet.signTransaction(xdr);
-      return submitTx(signedXdr, networkDetails.networkPassphrase, server);
+      const txHash = await submitTx(
+        signedXdr,
+        networkDetails.networkPassphrase,
+        server,
+      );
+      contractQueryCache.invalidateAll();
+      return txHash;
     },
     [contractId, wallet, server, networkDetails],
   );
