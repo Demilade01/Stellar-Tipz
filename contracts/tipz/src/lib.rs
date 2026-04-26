@@ -359,12 +359,12 @@ impl TipzContract {
     /// Return the 1-based rank of `address` on the leaderboard, or `None`
     /// when the address has not yet appeared in the top 50.
     pub fn get_leaderboard_rank(env: Env, address: Address) -> Option<u32> {
-        leaderboard::get_leaderboard_rank(&env, &address)
+        leaderboard::get_leaderboard_rank(&env, crate::types::LeaderboardPeriod::AllTime, &address)
     }
 
     /// Return the current number of entries on the leaderboard (0–50).
     pub fn get_leaderboard_size(env: Env) -> u32 {
-        leaderboard::get_leaderboard_size(&env)
+        leaderboard::get_leaderboard_size(&env, crate::types::LeaderboardPeriod::AllTime)
     }
 
     // ──────────────────────────────────────────────
