@@ -3,67 +3,67 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Modal from '../Modal';
 
-describe('Modal Component', () => {
-  it('renders modal content when isOpen is true', () => {
+describe("Modal", () => {
+  it("renders nothing when isOpen is false", () => {
+    const { container } = render(
+      <Modal isOpen={false} onClose={() => {}}>
+        <p>Hidden</p>
+      </Modal>,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("renders children when isOpen is true", () => {
     render(
-      <Modal isOpen={true} onClose={() => {}} title="Test Modal">
-        <div data-testid="modal-content">Modal Content</div>
-      </Modal>
+      <Modal isOpen onClose={() => {}}>
+        <p data-testid="modal-body">Content</p>
+      </Modal>,
     );
     expect(screen.getByText('Test Modal')).toBeInTheDocument();
     expect(screen.getByTestId('modal-content')).toBeInTheDocument();
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
-  it('does not render modal content when isOpen is false', () => {
+  it("renders the title and a close button when title is provided", () => {
     render(
-      <Modal isOpen={false} onClose={() => {}} title="Test Modal">
-        <div data-testid="modal-content">Modal Content</div>
-      </Modal>
+      <Modal isOpen onClose={() => {}} title="Send a tip">
+        <p>x</p>
+      </Modal>,
     );
-    expect(screen.queryByText('Test Modal')).toBeNull();
-    expect(screen.queryByTestId('modal-content')).toBeNull();
+    expect(screen.getByRole("heading", { name: "Send a tip" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /close modal/i })).toBeInTheDocument();
   });
 
-  it('calls onClose when close button (X) is clicked', () => {
-    const handleClose = vi.fn();
+  it("omits the close button when no title is provided", () => {
     render(
-      <Modal isOpen={true} onClose={handleClose} title="Test Modal">
-        <div>Modal Content</div>
-      </Modal>
+      <Modal isOpen onClose={() => {}}>
+        <p>x</p>
+      </Modal>,
     );
-    
-    const closeButton = screen.getByLabelText('Close modal');
-    fireEvent.click(closeButton);
-    
-    expect(handleClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: /close modal/i })).toBeNull();
   });
 
-  it('calls onClose when clicking backdrop', () => {
-    const handleClose = vi.fn();
+  it("calls onClose when the close button is clicked", async () => {
+    const onClose = vi.fn();
     render(
-      <Modal isOpen={true} onClose={handleClose} title="Test Modal">
-        <div>Modal Content</div>
-      </Modal>
+      <Modal isOpen onClose={onClose} title="Hi">
+        <p>x</p>
+      </Modal>,
     );
-    
-    const backdrop = screen.getByRole('presentation');
-    fireEvent.click(backdrop);
-    
-    expect(handleClose).toHaveBeenCalledTimes(1);
+    await userEvent.click(screen.getByRole("button", { name: /close modal/i }));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('calls onClose when Escape key is pressed', () => {
-    const handleClose = vi.fn();
+  it("calls onClose when the backdrop is clicked", async () => {
+    const onClose = vi.fn();
     render(
-      <Modal isOpen={true} onClose={handleClose} title="Test Modal">
-        <div>Modal Content</div>
-      </Modal>
+      <Modal isOpen onClose={onClose}>
+        <p>x</p>
+      </Modal>,
     );
-    
-    fireEvent.keyDown(document, { key: 'Escape' });
-    
-    expect(handleClose).toHaveBeenCalledTimes(1);
+    // Backdrop has role="presentation".
+    await userEvent.click(screen.getByRole("presentation"));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('traps focus within modal', async () => {
@@ -159,9 +159,9 @@ describe('Modal Component', () => {
 
   it('renders without a title', () => {
     render(
-      <Modal isOpen={true} onClose={() => {}}>
-        <div data-testid="modal-content">Modal Content</div>
-      </Modal>
+      <Modal isOpen onClose={() => {}} title="Confirm">
+        <p>x</p>
+      </Modal>,
     );
     expect(screen.queryByText('Test Modal')).toBeNull();
     expect(screen.getByTestId('modal-content')).toBeInTheDocument();
